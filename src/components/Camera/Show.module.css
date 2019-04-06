@@ -1,0 +1,11 @@
+.gallery {
+  width: 100%;
+  display: flex;
+  overflow-x: scroll;
+}
+
+.gallery > img {
+  height: 300px;
+  width: 600ox;
+  object-fit: cover;
+}
