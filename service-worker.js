@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/3.6.3/workbox-sw.js");
 
 importScripts(
-  "/ricecam/precache-manifest.254ca4c7baf1e2024899b3cb39c4d687.js"
+  "/ricecam/precache-manifest.cb729dccd0bbcc5dd3741e5e5c263805.js"
 );
 
 workbox.clientsClaim();
