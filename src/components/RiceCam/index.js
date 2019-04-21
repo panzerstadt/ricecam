@@ -35,8 +35,9 @@ const BrightnessDetector = ({ videoRef, isDetecting, delay, onDetect }) => {
       let context;
       const video = videoRef.current.video;
       const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth * RGB_SCALE;
-      canvas.height = video.videoHeight * RGB_SCALE;
+      canvas.width = 12;
+      canvas.height = 9;
+      // TODO: check if canvas is drawing entire image, or is it cut off
 
       context = canvas.getContext("2d");
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
