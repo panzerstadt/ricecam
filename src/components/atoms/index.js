@@ -7,6 +7,8 @@ export const isBright = async canvas => {
     .getContext("2d")
     .getImageData(0, 0, canvas.width, canvas.height);
 
+  console.log(clrs);
+
   const flat = clrs.data;
   const res = await predictBrightness(flat);
   console.log(res);

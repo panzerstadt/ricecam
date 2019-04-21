@@ -4,7 +4,8 @@ import useInterval from "../customHooks/useInterval";
 import Camera, { Gallery } from "../Camera";
 import { PushToFirebase } from "../Database";
 
-import { isBright, download, convertToArray } from "../atoms";
+import { download, convertToArray } from "../atoms";
+import { isBright } from "../BrightnessPredictor";
 
 const SCALE = 1;
 const RGB_SCALE = 0.02;

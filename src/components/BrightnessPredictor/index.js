@@ -14,6 +14,12 @@ const predictBrightness = async rgbarray => {
   if (model) {
     return await tf.tidy(() => {
       const xs = [Array.from(rgbarray)];
+
+      if (xs[0].length !== ARR_LENGTH)
+        console.log(
+          `your input rgbarray does not match. should be ${ARR_LENGTH}`
+        );
+
       const inputXS = tf.tensor2d(xs, [xs.length, ARR_LENGTH]);
 
       const preds = model.predict(inputXS);
@@ -25,6 +31,20 @@ const predictBrightness = async rgbarray => {
       return out;
     });
   }
+};
+
+// sml model learning bright and dark
+export const isBright = async canvas => {
+  const clrs = canvas
+    .getContext("2d")
+    .getImageData(0, 0, canvas.width, canvas.height);
+
+  console.log(clrs);
+
+  const flat = clrs.data;
+  const res = await predictBrightness(flat);
+  console.log(res);
+  return res > 0.6 ? true : false;
 };
 
 export default predictBrightness;
