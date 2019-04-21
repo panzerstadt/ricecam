@@ -14,13 +14,9 @@ const predictBrightness = async rgbarray => {
   if (model) {
     return await tf.tidy(() => {
       const xs = [Array.from(rgbarray)];
-
-      if (xs[0].length !== ARR_LENGTH)
-        console.log(
-          `your input rgbarray does not match. should be ${ARR_LENGTH}`
-        );
-
       const inputXS = tf.tensor2d(xs, [xs.length, ARR_LENGTH]);
+
+      console.log(inputXS);
 
       const preds = model.predict(inputXS);
 
@@ -47,4 +43,4 @@ export const isBright = async canvas => {
   return res > 0.6 ? true : false;
 };
 
-export default predictBrightness;
+export default isBright;

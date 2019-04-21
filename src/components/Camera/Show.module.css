@@ -6,6 +6,6 @@
 
 .gallery > img {
   height: 300px;
-  width: 600ox;
+  width: 300px;
   object-fit: cover;
 }

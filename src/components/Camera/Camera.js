@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import Webcam from "react-webcam";
 
+const SETTINGS = {
+  width: 800,
+  height: 800,
+  facingMode: "environment"
+};
+
 const WebcamComponent = ({ onRef }) => {
   const webcamRef = useRef();
   const [cameraReady, setCameraReady] = useState(false);
@@ -27,7 +33,16 @@ const WebcamComponent = ({ onRef }) => {
     onRef && onRef(webcamRef);
   }
 
-  return <Webcam audio={false} ref={webcamRef} screenshotFormat="image/jpeg" />;
+  return (
+    <Webcam
+      audio={false}
+      ref={webcamRef}
+      screenshotFormat="image/jpeg"
+      videoConstraints={SETTINGS}
+      height={400}
+      width={400}
+    />
+  );
 };
 
 export default WebcamComponent;
