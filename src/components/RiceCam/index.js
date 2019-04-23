@@ -6,7 +6,8 @@ import React, { useState, useEffect, useRef } from "react";
 
 import useInterval from "../customHooks/useInterval";
 import Camera, { Gallery } from "../Camera";
-import { pushImageDataToDB } from "../Database";
+import VideoRecorder from "../MediaRecorder";
+import { pushImageDataToDB, pushVideoDataToDB } from "../Database";
 
 import { download, convertToArray } from "../atoms";
 import { isBright } from "../BrightnessPredictor";
@@ -15,11 +16,11 @@ const SCALE = 1;
 const RGB_SCALE = 0.02;
 const DETECT_SCALE = 0.02;
 const STREAM_SCALE = 1;
+const MONITOR_SCALE = 0.1;
 
 const BrightnessDetector = ({ videoRef, isDetecting, delay, onDetect }) => {
-  // local ML
+  // local ML brightness detection
   const [detectionDelay, setDetectionDelay] = useState(500);
-
   useEffect(() => {
     if (delay && typeof delay === "number") setDetectionDelay(delay);
   }, [delay]);
@@ -52,22 +53,42 @@ const BrightnessDetector = ({ videoRef, isDetecting, delay, onDetect }) => {
   return null;
 };
 
+const PhotoRecorder = () => {};
+
 const CameraComponent = () => {
   const [videoRef, setVideoRef] = useState();
   const [isDay, setIsDay] = useState(true);
 
-  // local ML states
+  // local ML brightness detector
   const [isDetecting, setIsDetecting] = useState(false);
   const DELAY = 1000;
+  // video recorder
+  const [isRecording, setIsRecording] = useState(false);
+  const DURATION = 5000;
+
+  // timer for multiple video records
+  const [isRecordingContinuously, setIsRecordingContinuously] = useState(false);
+  const EVERY_N_MINS = 0.5;
+  const RECORDING_INTERVALS = EVERY_N_MINS * 60000;
+  useInterval(
+    () => {
+      if (!isRecording) {
+        setIsRecording(true);
+      } else {
+        console.log("recording still underway...");
+      }
+    },
+    isRecordingContinuously ? RECORDING_INTERVALS : null
+  );
 
   // local capture
-  const [delay, setDelay] = useState(1000);
+  const [captureDelay, setCaptureDelay] = useState(1000);
   const [isCapturing, setIsCapturing] = useState(false);
   useInterval(
     () => {
       capture();
     },
-    isCapturing ? delay : null
+    isCapturing ? captureDelay : null
   );
 
   const [data, setData] = useState([]);
@@ -80,6 +101,9 @@ const CameraComponent = () => {
 
       canvas.width = video.videoWidth * SCALE;
       canvas.height = video.videoHeight * SCALE;
+      // canvas.width = 12;
+      // canvas.height = 9;
+
       context = canvas.getContext("2d");
 
       // full res
@@ -109,7 +133,7 @@ const CameraComponent = () => {
     }
   };
 
-  // db streaming
+  // db streaming for images
   const [streamDelay, setStreamDelay] = useState(100);
   const [isStreaming, setIsStreaming] = useState(false);
   useInterval(
@@ -164,11 +188,11 @@ const CameraComponent = () => {
   };
 
   const capture5secvideo = () => {
-    setDelay(1);
+    setCaptureDelay(1);
     setIsCapturing(true);
     setTimeout(() => {
       setIsCapturing(false);
-      setDelay(1000);
+      setCaptureDelay(1000);
     }, 5000);
   };
 
@@ -196,9 +220,33 @@ const CameraComponent = () => {
     }
   };
 
+  const handleRecord1Hour = () => {
+    const OneHourInMS = 3600000;
+    setIsRecording(true);
+    setIsRecordingContinuously(true);
+    setTimeout(() => {
+      setIsRecordingContinuously(false);
+    }, OneHourInMS);
+  };
+
   const handleToggleDetect = () => {
     setIsDetecting(!isDetecting);
   };
+
+  const handleVideoComplete = vidBlob => {
+    console.log(vidBlob);
+    pushVideoDataToDB(vidBlob);
+    setIsRecording(false);
+  };
+
+  useEffect(() => {
+    if (videoRef) {
+      const video = videoRef.current.video;
+      video.height = video.videoHeight * MONITOR_SCALE;
+      video.width = video.videoWidth * MONITOR_SCALE;
+      console.log(videoRef.current.video);
+    }
+  }, [videoRef]);
 
   return (
     <div style={{ backgroundColor: isDay ? "white" : "#282c34" }}>
@@ -206,16 +254,32 @@ const CameraComponent = () => {
 
       <br />
       <code>debug buttons: </code>
-      <button onClick={captureOne}>capture</button>
+      {/* <button onClick={captureOne}>capture</button>
       <button onClick={capture5sec}>capture5sec</button>
       <button onClick={capture5secvideo}>capture5sec video</button>
       <button onClick={downloadAsJson}>download data as json</button>
-      <button onClick={sendToDB}>push to database</button>
+      <button onClick={sendToDB}>push to database</button> */}
       <button onClick={streamToDB}>toggle stream to database</button>
       <button onClick={handleToggleDetect}>toggle detection</button>
+      <button
+        style={{ color: isRecording ? "red" : "black" }}
+        onClick={() => setIsRecording(!isRecording)}
+      >
+        toggle video recording
+      </button>
+      <button onClick={handleRecord1Hour}>
+        record 5 sec videos for 1 hour
+      </button>
       <br />
       <br />
       <Gallery data={data} />
+      <VideoRecorder
+        videoRef={videoRef}
+        triggerRecording={isRecording}
+        duration={DURATION}
+        previewVideo
+        onComplete={handleVideoComplete}
+      />
       <BrightnessDetector
         videoRef={videoRef}
         isDetecting={isDetecting}

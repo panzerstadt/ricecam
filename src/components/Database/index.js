@@ -35,7 +35,7 @@ export const pushImageDataToDB = imgBlob => {
 
   const ref = firebase
     .storage()
-    .ref(`images/${timestamp}`)
+    .ref(`images/${timestamp}.png`)
     .put(imgBlob);
 
   console.log(ref);
@@ -47,7 +47,7 @@ export const pushVideoDataToDB = vidBlob => {
 
   const ref = firebase
     .storage()
-    .ref(`${vidFolder}/${timestamp}`)
+    .ref(`${vidFolder}/${timestamp}.mp4`)
     .put(vidBlob);
 
   console.log(ref);
