@@ -8,19 +8,19 @@ self.__precacheManifest = [
     "url": "/ricecam/static/js/runtime~main.a553ff62.js"
   },
   {
-    "revision": "4c29e8dc6ab7a564fe9c",
-    "url": "/ricecam/static/js/main.d3cfa5a6.chunk.js"
+    "revision": "8562191fade1d0d567bc",
+    "url": "/ricecam/static/js/main.59fc2f8a.chunk.js"
   },
   {
     "revision": "ccfe3ef457e124d01bcd",
     "url": "/ricecam/static/js/2.2ceae22b.chunk.js"
   },
   {
-    "revision": "4c29e8dc6ab7a564fe9c",
+    "revision": "8562191fade1d0d567bc",
     "url": "/ricecam/static/css/main.6e0b6fa7.chunk.css"
   },
   {
-    "revision": "737b259ee2224c99cc1304ad5d299650",
+    "revision": "99d8ef88e93294e78bc5d9ac61b315b0",
     "url": "/ricecam/index.html"
   }
 ];
