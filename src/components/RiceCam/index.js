@@ -3,15 +3,23 @@
 // https://console.firebase.google.com/u/3/project/operation-verde-ricecam/database
 
 import React, { useState, useEffect, useRef } from "react";
+// timestamps
+import dayjs from "dayjs";
+import "dayjs/locale/ja";
 
 import useInterval from "../customHooks/useInterval";
 import Camera, { Gallery } from "../Camera";
 import VideoRecorder from "../MediaRecorder";
-import { pushImageDataToDB, pushVideoDataToDB } from "../Database";
+import {
+  pushImageDataToStorage,
+  pushVideoDataToStorage,
+  grabListOfVideoPaths
+} from "../Database";
 
 import { download, convertToArray } from "../atoms";
 import { isBright } from "../BrightnessPredictor";
 
+dayjs.locale("ja");
 const SCALE = 1;
 const RGB_SCALE = 0.02;
 const DETECT_SCALE = 0.02;
@@ -55,7 +63,21 @@ const BrightnessDetector = ({ videoRef, isDetecting, delay, onDetect }) => {
 
 const PhotoRecorder = () => {};
 
-const CameraComponent = () => {
+const Timer = ({ start, end, onDetect }) => {
+  const [isActive, setIsActive] = useState(false);
+
+  const timestamp = dayjs().format("YYYY-MM-DDTHH:mm:ss:SSS");
+  const startTimestamp = dayjs(start);
+  const endTimestamp = dayjs(end);
+
+  console.log(timestamp, startTimestamp, endTimestamp);
+};
+
+const VideoList = () => {
+  // list videos from db
+};
+
+const CameraComponent = ({ showPreviews = false }) => {
   const [videoRef, setVideoRef] = useState();
   const [isDay, setIsDay] = useState(true);
 
@@ -68,7 +90,7 @@ const CameraComponent = () => {
 
   // timer for multiple video records
   const [isRecordingContinuously, setIsRecordingContinuously] = useState(false);
-  const EVERY_N_MINS = 0.5;
+  const EVERY_N_MINS = 0.2;
   const RECORDING_INTERVALS = EVERY_N_MINS * 60000;
   useInterval(
     () => {
@@ -164,7 +186,7 @@ const CameraComponent = () => {
       // blobbing takes a long time therefore there is a callback
       canvas.toBlob(b => {
         console.log(b);
-        pushImageDataToDB(b);
+        pushImageDataToStorage(b);
       });
     }
   };
@@ -204,7 +226,7 @@ const CameraComponent = () => {
 
   const sendToDB = () => {
     // push to firebase
-    pushImageDataToDB();
+    pushImageDataToStorage();
   };
 
   const streamToDB = () => {
@@ -229,13 +251,17 @@ const CameraComponent = () => {
     }, OneHourInMS);
   };
 
+  const handleRecordContinuous = () => {
+    console.log("recording forever!");
+  };
+
   const handleToggleDetect = () => {
     setIsDetecting(!isDetecting);
   };
 
   const handleVideoComplete = vidBlob => {
     console.log(vidBlob);
-    pushVideoDataToDB(vidBlob);
+    pushVideoDataToStorage(vidBlob);
     setIsRecording(false);
   };
 
@@ -259,6 +285,15 @@ const CameraComponent = () => {
       <button onClick={capture5secvideo}>capture5sec video</button>
       <button onClick={downloadAsJson}>download data as json</button>
       <button onClick={sendToDB}>push to database</button> */}
+      <button
+        onClick={async () => {
+          const l = await grabListOfVideoPaths();
+          console.log(l);
+          console.log(typeof l);
+        }}
+      >
+        list videos recorded today
+      </button>
       <button onClick={streamToDB}>toggle stream to database</button>
       <button onClick={handleToggleDetect}>toggle detection</button>
       <button
@@ -272,7 +307,7 @@ const CameraComponent = () => {
       </button>
       <br />
       <br />
-      <Gallery data={data} />
+      {showPreviews && <Gallery data={data} />}
       <VideoRecorder
         videoRef={videoRef}
         triggerRecording={isRecording}

@@ -26,11 +26,10 @@ const sortTimestampArray = (data, latest = false) => {
   else return data.sort((prev, next) => dayjs(prev) - dayjs(next)); // earliest first
 };
 
-export const pushImageDataToDB = imgBlob => {
+export const pushImageDataToStorage = imgBlob => {
   // push should only append imageData
   // (or url, depending on whether or not we use storage)
   // to the db
-  const imgCollection = "imageData";
   const timestamp = dayjs().format("YYYY-MM-DDTHH:mm:ss:SSS");
 
   const ref = firebase
@@ -41,16 +40,65 @@ export const pushImageDataToDB = imgBlob => {
   console.log(ref);
 };
 
-export const pushVideoDataToDB = vidBlob => {
+export const pushVideoDataToStorage = vidBlob => {
   const vidFolder = "videos";
   const timestamp = dayjs().format("YYYY-MM-DDTHH:mm:ss:SSS");
+  const daystamp = dayjs().format("YYYY-MM-DD");
 
-  const ref = firebase
+  firebase
     .storage()
     .ref(`${vidFolder}/${timestamp}.mp4`)
-    .put(vidBlob);
+    .put(vidBlob)
+    .then(res => {
+      console.log(res);
+      console.log(res.ref.location.path);
+      const path = res.ref.location.path;
+      const dbRef = firebase
+        .firestore()
+        .collection("videoURL")
+        .doc(daystamp)
+        .collection("urls")
+        .doc()
+        .set({ url: path });
+    })
+    .catch(e => console.log("error! ", e));
+};
 
-  console.log(ref);
+export const grabListOfVideoPaths = async day => {
+  const daystamp = day
+    ? dayjs(day).format("YYYY-MM-DD")
+    : dayjs().format("YYYY-MM-DD");
+
+  console.log("grabbing videos from: ", daystamp);
+
+  return await firebase
+    .firestore()
+    .collection("videoURL")
+    .doc(daystamp)
+    .collection("urls")
+    .get()
+    .then(async querySnapshot => {
+      let output = [];
+      await querySnapshot.forEach(async doc => {
+        // here are your DB video filepaths
+        const url = doc.data().url;
+
+        console.log(url);
+
+        return await firebase
+          .storage()
+          .ref(url)
+          .getDownloadURL()
+          .then(src => {
+            // and here are your downloadable urls
+            console.log("downloadable url: ", src);
+            output.push(src);
+          });
+      });
+
+      console.log("returning output! ", output);
+      return output;
+    });
 };
 
 const deleteImageDataFromDBRecords = () => {

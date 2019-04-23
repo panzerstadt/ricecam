@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@google-cloud/storage": "^2.5.0",
     "@tensorflow/tfjs": "^1.0.4",
     "d3-array": "^2.0.3",
     "dayjs": "^1.8.12",
