@@ -12,10 +12,24 @@ export const download = (
   a.click();
 };
 
-export const convertToObject = domOBJ => {
+export const convertToObject = (input, showFunction) => {
+  // recursively
+  // https://stackoverflow.com/questions/37733272/convert-dom-object-to-javascript-object
   let obj = {};
-  for (var p in domOBJ) {
-    obj[p] = domOBJ[p];
+  for (var p in input) {
+    switch (typeof input[p]) {
+      case "function":
+        if (showFunction) obj[p] = `function: ${input[p]}`;
+        break;
+      case "object":
+        obj[p] = convertToObject(input[p], showFunction);
+        break;
+      case "number":
+        obj[p] = input[p];
+        break;
+      default:
+        obj[p] = input[p];
+    }
   }
   return obj;
 };

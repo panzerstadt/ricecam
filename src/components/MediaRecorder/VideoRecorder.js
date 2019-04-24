@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { logging } from "../Database";
 
 const VideoRecorder = ({
   videoRef,
@@ -26,6 +27,7 @@ const VideoRecorder = ({
   const ulRef = useRef();
   useEffect(() => {
     if (triggerRecording === true && isRecording === false) {
+      logging("VideoRecorder: START starting one recording");
       record({ duration: recordDuration });
     }
   }, [triggerRecording, isRecording]);
@@ -33,7 +35,7 @@ const VideoRecorder = ({
   useEffect(() => {
     // if there is a recording
     if (videoChunk.length > 0) {
-      console.log("making linl!", videoChunk);
+      console.log("making link!", videoChunk);
       previewVideo && makeLink();
     }
   }, [videoChunk]);

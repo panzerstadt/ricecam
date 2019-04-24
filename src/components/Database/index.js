@@ -26,18 +26,144 @@ const sortTimestampArray = (data, latest = false) => {
   else return data.sort((prev, next) => dayjs(prev) - dayjs(next)); // earliest first
 };
 
-export const pushImageDataToStorage = imgBlob => {
-  // push should only append imageData
-  // (or url, depending on whether or not we use storage)
-  // to the db
+export const logging = (message, callback) => {
   const timestamp = dayjs().format("YYYY-MM-DDTHH:mm:ss:SSS");
+  const daystamp = dayjs().format("YYYY-MM-DD");
 
-  const ref = firebase
+  firebase
+    .firestore()
+    .collection("logs")
+    .doc(daystamp)
+    .collection("logs")
+    .doc(timestamp)
+    .set({ message: message }, { merge: true })
+    .then(v => {
+      callback && callback(v);
+    })
+    .catch(e => console.log("LOGGING ERROR: ", e));
+};
+
+export const activityMonitor = async callback => {
+  function convertToObject(input, showFunction) {
+    // recursively
+    // https://stackoverflow.com/questions/37733272/convert-dom-object-to-javascript-object
+    let obj = {};
+    for (var p in input) {
+      switch (typeof input[p]) {
+        case "function":
+          if (showFunction) obj[p] = `function: ${input[p]}`;
+          break;
+        case "object":
+          obj[p] = convertToObject(input[p], showFunction);
+          break;
+        case "number":
+          obj[p] = input[p];
+          break;
+        default:
+          obj[p] = input[p];
+      }
+    }
+    return obj;
+  }
+
+  const timestamp = dayjs().format("YYYY-MM-DDTHH:mm:ss:SSS");
+  const daystamp = dayjs().format("YYYY-MM-DD");
+
+  // browser tab storage
+  let browserStorage;
+  if ("storage" in navigator && "estimate" in navigator.storage) {
+    const estimate = await navigator.storage.estimate();
+    browserStorage = {
+      usage: estimate.usage,
+      quota: estimate.quota,
+      percent: `${((estimate.usage * 100) / estimate.quota).toFixed(0)} used`
+    };
+  } else {
+    browserStorage = "browser does not have storage API";
+  }
+  // js heap size
+  //   This API returns three pieces of data:
+  // jsHeapSizeLimit - The amount of memory (in bytes) that the JavaScript heap is limited to.
+  // totalJSHeapSize - The amount of memory (in bytes) that the JavaScript heap has allocated including free space.
+  // usedJSHeapSize - The amount of memory (in bytes) currently being used.
+  const mem = window.performance.memory || {};
+  // RAM
+  const ram =
+    `${navigator.deviceMemory} GB` ||
+    "browser does not have deviceMemory API (ram)";
+  // network speed
+  const connection =
+    navigator.connection ||
+    navigator.mozConnection ||
+    navigator.webkitConnection ||
+    navigator.msConnection;
+  const connectionSpeed = connection
+    ? connection.effectiveType
+    : "browser does not have connection API";
+  // battery
+  let battery;
+  if ("getBattery" in navigator) {
+    battery = await navigator.getBattery();
+  }
+  const batteryLevel = battery
+    ? battery.level
+    : "browser does not have battery API";
+  // general performance
+  // .toJSON() is unreliable, returns custom objects
+  const performance = convertToObject(window.performance, false);
+
+  const output = {
+    storage: browserStorage,
+    ram: ram,
+    network: connectionSpeed,
+    battery: batteryLevel,
+    performance: performance,
+    browserMemory: {
+      ...convertToObject(mem, false),
+      usage: `${(mem.totalJSHeapSize / mem.jsHeapSizeLimit) * 100} percent`,
+      comment:
+        "units in bytes. percent is percent of allocated browser memory (multiple tabs included)"
+    }
+  };
+
+  firebase
+    .firestore()
+    .collection("logs")
+    .doc(daystamp)
+    .collection("browser performance logs")
+    .doc(timestamp)
+    .set({ status: output }, { merge: true })
+    .then(v => {
+      callback && callback(v);
+    })
+    .catch(e => console.log("LOGGING ERROR: ", e));
+};
+
+export const pushImageDataToStorage = imgBlob => {
+  const imgFolder = "images";
+  const timestamp = dayjs().format("YYYY-MM-DDTHH:mm:ss:SSS");
+  const daystamp = dayjs().format("YYYY-MM-DD");
+
+  firebase
     .storage()
-    .ref(`images/${timestamp}.png`)
-    .put(imgBlob);
-
-  console.log(ref);
+    .ref(`${imgFolder}/${timestamp}.png`)
+    .put(imgBlob)
+    .then(res => {
+      console.log(res);
+      console.log(res.ref.location.path);
+      const path = res.ref.location.path;
+      firebase
+        .firestore()
+        .collection("imageURL")
+        .doc(daystamp)
+        .collection("urls")
+        .doc()
+        .set({ url: path });
+    })
+    .catch(e => {
+      const err = `pushImageDataToStorage: ERROR ${e}`;
+      logging(err, () => console.log(err));
+    });
 };
 
 export const pushVideoDataToStorage = vidBlob => {
@@ -59,9 +185,16 @@ export const pushVideoDataToStorage = vidBlob => {
         .doc(daystamp)
         .collection("urls")
         .doc()
-        .set({ url: path });
+        .set({ url: path })
+        .then(v => {
+          const l = `pushVideoDataToStorage: COMPLETE video:${vidFolder}/${timestamp}.mp4, ref: ${path}, callback: ${v}`;
+          logging(l, () => console.log(l));
+        });
     })
-    .catch(e => console.log("error! ", e));
+    .catch(e => {
+      const err = `pushVideoDataToStorage: ERROR ${e}`;
+      logging(err, () => console.log(err));
+    });
 };
 
 export const grabListOfVideoPaths = async day => {
@@ -82,8 +215,7 @@ export const grabListOfVideoPaths = async day => {
       await querySnapshot.forEach(async doc => {
         // here are your DB video filepaths
         const url = doc.data().url;
-
-        console.log(url);
+        // console.log(url);
 
         return await firebase
           .storage()
@@ -91,12 +223,12 @@ export const grabListOfVideoPaths = async day => {
           .getDownloadURL()
           .then(src => {
             // and here are your downloadable urls
-            console.log("downloadable url: ", src);
+            // console.log("downloadable url: ", src);
             output.push(src);
           });
       });
 
-      console.log("returning output! ", output);
+      //console.log("returning output! ", output);
       return output;
     });
 };
