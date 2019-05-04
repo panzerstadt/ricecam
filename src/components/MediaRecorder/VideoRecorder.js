@@ -6,7 +6,7 @@ const VideoRecorder = ({
   triggerRecording,
   duration,
   onComplete,
-  previewVideo
+  showPreview
 }) => {
   const OPTIONS = {
     tag: "video",
@@ -36,7 +36,7 @@ const VideoRecorder = ({
     // if there is a recording
     if (videoChunk.length > 0) {
       console.log("making link!", videoChunk);
-      previewVideo && makeLink();
+      showPreview && makeLink();
     }
   }, [videoChunk]);
 

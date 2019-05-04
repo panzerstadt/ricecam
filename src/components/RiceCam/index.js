@@ -10,16 +10,18 @@ import "dayjs/locale/ja";
 import useInterval from "../customHooks/useInterval";
 import Camera, { Gallery } from "../Camera";
 import VideoRecorder from "../MediaRecorder";
+import BrightnessDetector from "../BrightnessPredictor";
 import {
   pushImageDataToStorage,
   pushVideoDataToStorage,
+  reportAppStatetoDB,
+  listenToDBAppState,
   grabListOfVideoPaths,
   logging,
   activityMonitor
 } from "../Database";
 
 import { download, convertToArray, convertToObject } from "../atoms";
-import { isBright } from "../BrightnessPredictor";
 
 dayjs.locale("ja");
 const SCALE = 1;
@@ -28,51 +30,157 @@ const DETECT_SCALE = 0.02;
 const STREAM_SCALE = 1;
 const MONITOR_SCALE = 0.1;
 
-const BrightnessDetector = ({ videoRef, isDetecting, delay, onDetect }) => {
-  // local ML brightness detection
-  const [detectionDelay, setDetectionDelay] = useState(500);
-  useEffect(() => {
-    if (delay && typeof delay === "number") setDetectionDelay(delay);
-  }, [delay]);
-
+const PhotoRecorder = ({ videoRef, captureDelay, isCapturing, onRecord }) => {
   useInterval(
     () => {
-      detect();
+      capture();
     },
-    isDetecting ? detectionDelay : null
+    isCapturing ? captureDelay : null
   );
-  const detect = async () => {
+
+  const [data, setData] = useState([]);
+  const [rgb, setRGB] = useState([]);
+  const capture = () => {
+    let out = {
+      b64: "",
+      rgbArray: []
+    };
     if (videoRef) {
       let context;
       const video = videoRef.current.video;
       const canvas = document.createElement("canvas");
-      canvas.width = 12;
-      canvas.height = 9;
-      // TODO: check if canvas is drawing entire image, or is it cut off
+
+      canvas.width = video.videoWidth * SCALE;
+      canvas.height = video.videoHeight * SCALE;
+      // canvas.width = 12;
+      // canvas.height = 9;
+
+      context = canvas.getContext("2d");
+
+      // full res
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // base64 setstate
+      const b64 = canvas.toDataURL();
+      setData([...data, b64]);
+      out.b64 = [...data, b64];
+
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      canvas.width = video.videoWidth * RGB_SCALE;
+      canvas.height = video.videoHeight * RGB_SCALE;
 
       context = canvas.getContext("2d");
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // check brightness
-      const bright = await isBright(canvas);
-      if (onDetect) {
-        onDetect({ bright: bright });
-      }
+      // rgb array (flat)
+      const clrs = context.getImageData(0, 0, canvas.width, canvas.height);
+      console.log(clrs);
+      const flat = convertToArray(clrs.data);
+
+      setRGB([...rgb, flat]);
+      out.rgbArray = [...rgb, flat];
+      // download(JSON.stringify({ data: flat }), "temp.json", "application/json");
+
+      onRecord && onRecord(out);
+
+      return data;
     }
   };
-  return null;
+
+  return <p>capturing: {isCapturing}</p>;
 };
 
-const PhotoRecorder = () => {};
+const PhotoStream = ({ videoRef, streamDelay, isStreaming }) => {
+  useInterval(
+    () => {
+      stream();
+    },
+    isStreaming ? streamDelay : null
+  );
+  const stream = () => {
+    if (videoRef) {
+      let context;
+      const video = videoRef.current.video;
+      const canvas = document.createElement("canvas");
+
+      canvas.width = video.videoWidth * STREAM_SCALE;
+      canvas.height = video.videoHeight * STREAM_SCALE;
+      context = canvas.getContext("2d");
+
+      // full res
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // preview
+      // base64 setstate
+      const b64 = canvas.toDataURL();
+      // setData([...data, b64]);
+
+      // blob it to send to db
+      // blobbing takes a long time therefore there is a callback
+      canvas.toBlob(b => {
+        console.log(b);
+        pushImageDataToStorage(b);
+      });
+    }
+  };
+
+  return <p> DEBUG: photo streaming: {`${isStreaming}`}</p>;
+};
+
+const isWithinTimeRange = (start, end) => {
+  console.log(start, end);
+  if (!start || !end) return false;
+  const timestamp = dayjs();
+  const sH = start.slice(0, 2);
+  const sM = start.slice(2);
+  const startTimestamp = dayjs()
+    .hour(sH)
+    .minute(sM);
+
+  const eH = end.slice(0, 2);
+  const eM = end.slice(2);
+  const endTimestamp = dayjs()
+    .hour(eH)
+    .minute(eM);
+
+  const chk1 = timestamp.isAfter(startTimestamp);
+  const chk2 = timestamp.isBefore(endTimestamp);
+  const res = chk1 && chk2;
+
+  return res;
+};
 
 const Timer = ({ start, end, onDetect }) => {
-  const [isActive, setIsActive] = useState(false);
+  if (!start || !end) return "null timer";
+  const timestamp = dayjs();
+  const sH = start.slice(0, 2);
+  const sM = start.slice(2);
+  const startTimestamp = dayjs()
+    .hour(sH)
+    .minute(sM);
 
-  const timestamp = dayjs().format("YYYY-MM-DDTHH:mm:ss:SSS");
-  const startTimestamp = dayjs(start);
-  const endTimestamp = dayjs(end);
+  const eH = end.slice(0, 2);
+  const eM = end.slice(2);
+  const endTimestamp = dayjs()
+    .hour(eH)
+    .minute(eM);
 
-  console.log(timestamp, startTimestamp, endTimestamp);
+  const chk1 = timestamp.isAfter(startTimestamp);
+  const chk2 = timestamp.isBefore(endTimestamp);
+  const res = chk1 && chk2;
+
+  res && onDetect && onDetect(res);
+
+  return (
+    <div>
+      <h3>timer: </h3>
+      <p>now: {timestamp.format("HH:mm")}</p>
+      <p>start: {startTimestamp.format("HH:mm")}</p>
+      <p>end: {endTimestamp.format("HH:mm")}</p>
+      <p>recording allowed? : {`${res}`}</p>
+    </div>
+  );
 };
 
 const VideoList = () => {
@@ -81,8 +189,6 @@ const VideoList = () => {
 
   useEffect(() => {
     grabListOfVideoPaths().then(v => {
-      console.log("paths");
-      console.log(v);
       setVlist(v);
     });
   }, []);
@@ -117,7 +223,7 @@ const CameraComponent = ({ showPreviews = false }) => {
   const [isDay, setIsDay] = useState(true);
   // log messages
   const handleLog = message => {
-    setLogs([...logs.slice(-4), message]);
+    setLogs(prev => [...prev.slice(-4), message]);
     logging(message, v => console.log("LOGGER: completed. ", v));
   };
   // log browser status
@@ -130,182 +236,176 @@ const CameraComponent = ({ showPreviews = false }) => {
   // local ML brightness detector
   const [isDetecting, setIsDetecting] = useState(false);
   const DELAY = 1000;
+
   // video recorder
   const [isRecording, setIsRecording] = useState(false);
-  const DURATION = 5000;
-
-  // timer for multiple video records
+  const [videoDuration, setVideoDuration] = useState(5000);
+  const [timer, setTimer] = useState({ start: null, end: null });
   const [isRecordingContinuously, setIsRecordingContinuously] = useState(false);
   const EVERY_N_MINS = 5;
-  const RECORDING_INTERVALS = EVERY_N_MINS * 60000;
+  const [recordIntervalMin, setRecordIntervalMin] = useState(EVERY_N_MINS);
   useInterval(
     () => {
       const t = dayjs().format("YYYY-MM-DDTHH:mm:ss:SSS");
 
-      if (!isRecording) {
+      if (!isRecording && isWithinTimeRange(timer.start, timer.end)) {
         handleLog(`recording video at ${t}`);
+        console.log(
+          "within timer?? ",
+          isWithinTimeRange(timer.start, timer.end)
+        );
         setIsRecording(true);
       } else {
         handleLog("recording still underway, not setting recording to true");
       }
     },
-    isRecordingContinuously ? RECORDING_INTERVALS : null
+    isRecordingContinuously ? recordIntervalMin * 60000 : null
   );
 
-  // local capture
-  const [captureDelay, setCaptureDelay] = useState(1000);
-  const [isCapturing, setIsCapturing] = useState(false);
-  useInterval(
-    () => {
-      capture();
-    },
-    isCapturing ? captureDelay : null
-  );
-
-  const [data, setData] = useState([]);
-  const [rgb, setRGB] = useState([]);
-  const capture = () => {
+  // listen to DB commands (remote)
+  const [dbCommands, setDBCommands] = useState({});
+  useEffect(() => {
     if (videoRef) {
-      let context;
-      const video = videoRef.current.video;
-      const canvas = document.createElement("canvas");
-
-      canvas.width = video.videoWidth * SCALE;
-      canvas.height = video.videoHeight * SCALE;
-      // canvas.width = 12;
-      // canvas.height = 9;
-
-      context = canvas.getContext("2d");
-
-      // full res
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // base64 setstate
-      const b64 = canvas.toDataURL();
-      setData([...data, b64]);
-
-      context.clearRect(0, 0, canvas.width, canvas.height);
-
-      canvas.width = video.videoWidth * RGB_SCALE;
-      canvas.height = video.videoHeight * RGB_SCALE;
-
-      context = canvas.getContext("2d");
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // rgb array (flat)
-      const clrs = context.getImageData(0, 0, canvas.width, canvas.height);
-      console.log(clrs);
-      const flat = convertToArray(clrs.data);
-
-      setRGB([...rgb, flat]);
-      // download(JSON.stringify({ data: flat }), "temp.json", "application/json");
-
-      return data;
+      console.log("listening to DB!");
+      listenToDBAppState(setDBCommands);
+    }
+  }, [videoRef]);
+  // set commands according to db
+  const handleSetVideoDuration = amount => {
+    handleLog(
+      `setting recording duration to ${dbCommands.videoDurationSec} secs`
+    );
+    setVideoDuration(amount);
+  };
+  const handleSetVideoRecordFrequency = mins => {
+    handleLog(
+      `setting recording interval to ${dbCommands.videoRecordFreqMin} mins`
+    );
+    setRecordIntervalMin(mins);
+  };
+  const handleSetTimer = time => {
+    handleLog(`setting timers to ${JSON.stringify(time)}`);
+    if (time.start && time.end) {
+      setLocalStateMonitor(p => ({
+        ...p,
+        isTimerSet: true
+      }));
+      setTimer(time);
     }
   };
-
-  // db streaming for images
-  const [streamDelay, setStreamDelay] = useState(100);
-  const [isStreaming, setIsStreaming] = useState(false);
-  useInterval(
-    () => {
-      stream();
-    },
-    isStreaming ? streamDelay : null
-  );
-  const stream = () => {
-    if (videoRef) {
-      let context;
-      const video = videoRef.current.video;
-      const canvas = document.createElement("canvas");
-
-      canvas.width = video.videoWidth * STREAM_SCALE;
-      canvas.height = video.videoHeight * STREAM_SCALE;
-      context = canvas.getContext("2d");
-
-      // full res
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // preview
-      // base64 setstate
-      const b64 = canvas.toDataURL();
-      setData([...data, b64]);
-
-      // blob it to send to db
-      // blobbing takes a long time therefore there is a callback
-      canvas.toBlob(b => {
-        console.log(b);
-        pushImageDataToStorage(b);
-      });
+  const handleRecordOnce = run => {
+    handleLog(`recording video once`);
+    setLocalStateMonitor(p => ({
+      ...p,
+      isRecording: true
+    }));
+    setIsRecording(true);
+  };
+  const handleRecordContinuous = run => {
+    if (run) {
+      handleLog(
+        `setting continuous recording to ${dbCommands.setContinuousRecording}`
+      );
+      setLocalStateMonitor(p => ({
+        ...p,
+        isContinuouslyRecording: true,
+        isRecording: true
+      }));
+      setIsRecording(true);
+      setIsRecordingContinuously(true);
+    } else {
+      handleLog(
+        `setting continuous recording to ${dbCommands.setContinuousRecording}`
+      );
+      setLocalStateMonitor(p => ({
+        ...p,
+        isContinuouslyRecording: false,
+        isRecording: false
+      }));
+      setIsRecording(false);
+      setIsRecordingContinuously(false);
     }
   };
+  useEffect(() => {
+    if (dbCommands) {
+      handleLog(`commands received: ${JSON.stringify(dbCommands)}`);
+      if (
+        timer.start !== dbCommands.timerStart ||
+        timer.end !== dbCommands.timerEnd
+      ) {
+        handleSetTimer({
+          start: dbCommands.timerStart,
+          end: dbCommands.timerEnd
+        });
+      }
+      if (isRecordingContinuously !== dbCommands.setContinuousRecording) {
+        handleRecordContinuous(dbCommands.setContinuousRecording);
+      }
+      if (videoDuration !== dbCommands.videoDurationSec) {
+        handleSetVideoDuration(dbCommands.videoDurationSec);
+      }
+      if (recordIntervalMin !== dbCommands.videoRecordFreqMin) {
+        handleSetVideoRecordFrequency(dbCommands.videoRecordFreqMin);
+      }
+    }
+  }, [dbCommands]);
+
+  // push local state to DB
+  const [localStateMonitor, setLocalStateMonitor] = useState({
+    isContinuouslyRecording: null,
+    isRecording: null,
+    isTimerSet: null,
+    nextRecordingTime: null
+  });
+  useEffect(() => {
+    reportAppStatetoDB(localStateMonitor);
+  }, [localStateMonitor]);
 
   // --------
   // TESTING
   // --------
-
-  const captureOne = () => {
-    setIsCapturing(true);
-    setTimeout(() => {
-      setIsCapturing(false);
-    }, 1100);
-  };
-
-  const capture5sec = () => {
-    setIsCapturing(true);
-    setTimeout(() => {
-      setIsCapturing(false);
-    }, 5000);
-  };
-
-  const capture5secvideo = () => {
-    setCaptureDelay(1);
-    setIsCapturing(true);
-    setTimeout(() => {
-      setIsCapturing(false);
-      setCaptureDelay(1000);
-    }, 5000);
-  };
-
-  const downloadAsJson = () => {
-    download(JSON.stringify({ data: rgb }), "temp.json", "application/json");
-    setData([]);
-    setRGB([]);
-  };
-
-  const sendToDB = () => {
-    // push to firebase
-    pushImageDataToStorage();
-  };
-
+  // db streaming for images
+  const [streamDelay, setStreamDelay] = useState(100);
+  const [isStreaming, setIsStreaming] = useState(false);
   const streamToDB = () => {
     // toggle
-    handleLog("streaming images to database!");
+
     if (!isStreaming) {
-      console.log("capturing!");
-      setStreamDelay(1);
+      handleLog("streaming images to database!");
+      // setStreamDelay(100);
       setIsStreaming(true);
     } else {
-      console.log("stopping!");
+      handleLog("image streaming stopped!");
       setIsStreaming(false);
-      setStreamDelay(1000);
+      // setStreamDelay(1000);
     }
   };
-
-  const handleRecord1Hour = () => {
-    const OneHourInMS = 3600000;
-    setIsRecording(true);
-    setIsRecordingContinuously(true);
-    setTimeout(() => {
-      setIsRecordingContinuously(false);
-    }, OneHourInMS);
+  const handleStreamToDB = run => {
+    if (run) {
+      handleLog("DEBUG: streaming images to database!");
+      // setStreamDelay(100);
+      setIsStreaming(true);
+    } else {
+      handleLog("DEBUG: stopping image stream!");
+      setIsStreaming(false);
+    }
   };
+  useEffect(() => {
+    if (dbCommands) {
+      if (isStreaming !== dbCommands.debugStreamImages) {
+        handleStreamToDB(dbCommands.debugStreamImages);
+      }
+    }
+  }, [dbCommands]);
 
-  const handleRecordContinuous = () => {
-    handleLog("recording forever!");
-    setIsRecording(true);
-    setIsRecordingContinuously(true);
-  };
+  // const handleRecord1Hour = () => {
+  //   const OneHourInMS = 3600000;
+  //   setIsRecording(true);
+  //   setIsRecordingContinuously(true);
+  //   setTimeout(() => {
+  //     setIsRecordingContinuously(false);
+  //   }, OneHourInMS);
+  // };
 
   const handleToggleDetect = () => {
     setIsDetecting(!isDetecting);
@@ -314,6 +414,7 @@ const CameraComponent = ({ showPreviews = false }) => {
   const handleVideoComplete = vidBlob => {
     console.log(vidBlob);
     pushVideoDataToStorage(vidBlob);
+    setLocalStateMonitor(p => ({ ...p, isRecording: false }));
     setIsRecording(false);
   };
 
@@ -338,26 +439,25 @@ const CameraComponent = ({ showPreviews = false }) => {
       <button onClick={downloadAsJson}>download data as json</button>
       <button onClick={sendToDB}>push to database</button> */}
       <button
-        onClick={async () => {
-          const l = await grabListOfVideoPaths();
-          console.log(l);
-          console.log(typeof l);
-        }}
+        style={{ color: isStreaming ? "red" : "orange" }}
+        onClick={streamToDB}
       >
-        list videos recorded today
+        DEBUG: toggle stream to database
       </button>
-      <button onClick={streamToDB}>toggle stream to database</button>
       <button onClick={handleToggleDetect}>toggle brightness detection</button>
       <button
         style={{ color: isRecording ? "red" : "black" }}
-        onClick={() => setIsRecording(!isRecording)}
+        onClick={handleRecordOnce}
       >
         record 5 sec
       </button>
-      <button onClick={handleRecord1Hour}>
+      {/* <button onClick={handleRecord1Hour}>
         record 5 sec videos for 1 hour
-      </button>
-      <button onClick={handleRecordContinuous}>
+      </button> */}
+      <button
+        onClick={handleRecordContinuous}
+        style={{ color: isRecordingContinuously ? "red" : "black" }}
+      >
         record 5 sec indefinitely
       </button>
       <br />
@@ -368,15 +468,36 @@ const CameraComponent = ({ showPreviews = false }) => {
       </ul>
 
       <br />
-      {showPreviews && <Gallery data={data} />}
+      {/* {showPreviews && <Gallery data={data} />} */}
       <VideoRecorder
         videoRef={videoRef}
         triggerRecording={isRecording}
-        duration={DURATION}
-        previewVideo={showPreviews}
+        duration={videoDuration}
+        showPreview={showPreviews}
         onComplete={handleVideoComplete}
       />
-      <VideoList />
+      {/* possible usage: user (twitter) controlled photo session
+      <PhotoRecorder
+        videoRef={videoRef}
+        showPreview={showPreviews}
+        captureDelay={captureDelay}
+        isCapturing={isCapturing}
+      /> */}
+
+      <PhotoStream
+        videoRef={videoRef}
+        showPreview={showPreviews}
+        streamDelay={streamDelay}
+        isStreaming={isStreaming}
+      />
+      <br />
+      <h3>local state:</h3>
+      {JSON.stringify(localStateMonitor, null, 2)}
+
+      <h3>db state</h3>
+      {JSON.stringify(dbCommands, null, 2)}
+
+      {/* <VideoList /> */}
       <BrightnessDetector
         videoRef={videoRef}
         isDetecting={isDetecting}

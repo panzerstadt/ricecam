@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import firebase from "./lib/firebase";
 
 // timestamps
@@ -144,13 +145,13 @@ export const pushImageDataToStorage = imgBlob => {
   const timestamp = dayjs().format("YYYY-MM-DDTHH:mm:ss:SSS");
   const daystamp = dayjs().format("YYYY-MM-DD");
 
+  console.log("pushing Image blob: ", imgBlob);
   firebase
     .storage()
     .ref(`${imgFolder}/${timestamp}.png`)
     .put(imgBlob)
     .then(res => {
-      console.log(res);
-      console.log(res.ref.location.path);
+      console.log(`image blob pushed to: ${res.ref.location.path}`, res);
       const path = res.ref.location.path;
       firebase
         .firestore()
@@ -162,7 +163,8 @@ export const pushImageDataToStorage = imgBlob => {
     })
     .catch(e => {
       const err = `pushImageDataToStorage: ERROR ${e}`;
-      logging(err, () => console.log(err));
+      console.log(err);
+      logging(err);
     });
 };
 
@@ -231,6 +233,65 @@ export const grabListOfVideoPaths = async day => {
       //console.log("returning output! ", output);
       return output;
     });
+};
+
+// single call
+export const pullAppStateFromDB = () => {
+  firebase
+    .firestore()
+    .collection("appState")
+    .doc("commands")
+    .get()
+    .then(doc => {
+      console.log(doc.data());
+    })
+    .catch(e => console.log("REMOTE DB STATE READ ERROR: ", e));
+};
+
+// listener function
+export const listenToDBAppState = onChange => {
+  return firebase
+    .firestore()
+    .collection("appState")
+    .doc("commands")
+    .onSnapshot(doc => {
+      onChange && onChange(doc.data());
+      return doc.data();
+    });
+};
+// notify function
+export const reportAppStatetoDB = currentState => {
+  firebase
+    .firestore()
+    .collection("appState")
+    .doc("currentState")
+    .set(currentState, { merge: true })
+    .then(v => console.log("REMOTE STATE UPDATER: complete. ", v))
+    .catch(e => console.log("REMOTE DB STATE UPDATE ERROR: ", e));
+};
+
+export const FireStoreState = ({
+  collection = "appState",
+  doc = "commands",
+  onUpdate
+}) => {
+  const [dbState, setDBState] = useState({});
+
+  useEffect(() => {
+    firebase
+      .collection(collection)
+      .doc(doc)
+      .onSnapshot(snapshot => {
+        setDBState(snapshot.data());
+      });
+    return () => setDBState({});
+  }, []);
+
+  useEffect(() => {
+    if (onUpdate) onUpdate(dbState);
+  }, [dbState]);
+
+  return <p>db state: {JSON.stringify(dbState, null, 2)}</p>;
 };
 
 const deleteImageDataFromDBRecords = () => {

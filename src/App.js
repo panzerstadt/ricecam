@@ -7,6 +7,8 @@ class App extends Component {
   render() {
     return (
       <div className="App">
+        <p>v1.1</p>
+        <br />
         <RiceCam />
       </div>
     );
