@@ -181,7 +181,7 @@ export const pushVideoDataToStorage = vidBlob => {
       console.log(res);
       console.log(res.ref.location.path);
       const path = res.ref.location.path;
-      const dbRef = firebase
+      firebase
         .firestore()
         .collection("videoURL")
         .doc(daystamp)
@@ -194,7 +194,7 @@ export const pushVideoDataToStorage = vidBlob => {
         });
     })
     .catch(e => {
-      const err = `pushVideoDataToStorage: ERROR ${e}`;
+      const err = `pushVideoDataToStorage: ERROR ${JSON.stringify(e)}`;
       logging(err, () => console.log(err));
     });
 };
@@ -219,19 +219,14 @@ export const grabListOfVideoPaths = async day => {
         const url = doc.data().url;
         // console.log(url);
 
-        return await firebase
-          .storage()
-          .ref(url)
-          .getDownloadURL()
-          .then(src => {
-            // and here are your downloadable urls
-            // console.log("downloadable url: ", src);
-            output.push(src);
-          });
+        output.push(
+          firebase
+            .storage()
+            .ref(url)
+            .getDownloadURL() // this is an async function
+        );
       });
-
-      //console.log("returning output! ", output);
-      return output;
+      return Promise.all(output);
     });
 };
 
