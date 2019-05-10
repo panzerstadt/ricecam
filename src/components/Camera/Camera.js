@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import Webcam from "react-webcam";
 
 const SETTINGS = {
-  width: 800,
-  height: 800,
+  width: 1080,
+  height: 1080,
   facingMode: "environment"
 };
 

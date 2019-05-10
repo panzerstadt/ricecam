@@ -162,7 +162,7 @@ export const pushImageDataToStorage = imgBlob => {
         .set({ url: path });
     })
     .catch(e => {
-      const err = `pushImageDataToStorage: ERROR ${e}`;
+      const err = `pushImageDataToStorage: ERROR ${JSON.stringify(e)}`;
       console.log(err);
       logging(err);
     });
