@@ -13,7 +13,7 @@ const PushToFirebase = (databaseRef = "test", data, callback) => {
     .database()
     .ref(databaseRef)
     .push(data)
-    .then(v => callback(v));
+    .then((v) => callback(v));
 };
 
 const PushToFirestore = (databaseRef = "test", data, callback) => {
@@ -38,13 +38,13 @@ export const logging = (message, callback) => {
     .collection("logs")
     .doc(timestamp)
     .set({ message: message }, { merge: true })
-    .then(v => {
+    .then((v) => {
       callback && callback(v);
     })
-    .catch(e => console.log("LOGGING ERROR: ", e));
+    .catch((e) => console.log("LOGGING ERROR: ", e));
 };
 
-export const activityMonitor = async callback => {
+export const activityMonitor = async (callback) => {
   function convertToObject(input, showFunction) {
     // recursively
     // https://stackoverflow.com/questions/37733272/convert-dom-object-to-javascript-object
@@ -77,7 +77,7 @@ export const activityMonitor = async callback => {
     browserStorage = {
       usage: estimate.usage,
       quota: estimate.quota,
-      percent: `${((estimate.usage * 100) / estimate.quota).toFixed(0)} used`
+      percent: `${((estimate.usage * 100) / estimate.quota).toFixed(0)} used`,
     };
   } else {
     browserStorage = "browser does not have storage API";
@@ -123,8 +123,8 @@ export const activityMonitor = async callback => {
       ...convertToObject(mem, false),
       usage: `${(mem.totalJSHeapSize / mem.jsHeapSizeLimit) * 100} percent`,
       comment:
-        "units in bytes. percent is percent of allocated browser memory (multiple tabs included)"
-    }
+        "units in bytes. percent is percent of allocated browser memory (multiple tabs included)",
+    },
   };
 
   firebase
@@ -134,13 +134,13 @@ export const activityMonitor = async callback => {
     .collection("browser performance logs")
     .doc(timestamp)
     .set({ status: output }, { merge: true })
-    .then(v => {
+    .then((v) => {
       callback && callback(v);
     })
-    .catch(e => console.log("LOGGING ERROR: ", e));
+    .catch((e) => console.log("LOGGING ERROR: ", e));
 };
 
-export const pushImageDataToStorage = imgBlob => {
+export const pushImageDataToStorage = (imgBlob) => {
   const imgFolder = "images";
   const timestamp = dayjs().format("YYYY-MM-DDTHH:mm:ss:SSS");
   const daystamp = dayjs().format("YYYY-MM-DD");
@@ -150,7 +150,7 @@ export const pushImageDataToStorage = imgBlob => {
     .storage()
     .ref(`${imgFolder}/${timestamp}.png`)
     .put(imgBlob)
-    .then(res => {
+    .then((res) => {
       console.log(`image blob pushed to: ${res.ref.location.path}`, res);
       const path = res.ref.location.path;
       firebase
@@ -161,23 +161,23 @@ export const pushImageDataToStorage = imgBlob => {
         .doc()
         .set({ url: path });
     })
-    .catch(e => {
+    .catch((e) => {
       const err = `pushImageDataToStorage: ERROR ${JSON.stringify(e)}`;
       console.log(err);
       logging(err);
     });
 };
 
-export const pushVideoDataToStorage = vidBlob => {
+export const pushVideoDataToStorage = (vidBlob, namePrefix = "") => {
   const vidFolder = "videos";
   const timestamp = dayjs().format("YYYY-MM-DDTHH:mm:ss:SSS");
   const daystamp = dayjs().format("YYYY-MM-DD");
 
   firebase
     .storage()
-    .ref(`${vidFolder}/${timestamp}.mp4`)
+    .ref(`${vidFolder}/${namePrefix}-${timestamp}.mp4`)
     .put(vidBlob)
-    .then(res => {
+    .then((res) => {
       console.log(res);
       console.log(res.ref.location.path);
       const path = res.ref.location.path;
@@ -188,18 +188,18 @@ export const pushVideoDataToStorage = vidBlob => {
         .collection("urls")
         .doc()
         .set({ url: path })
-        .then(v => {
+        .then((v) => {
           const l = `pushVideoDataToStorage: COMPLETE video:${vidFolder}/${timestamp}.mp4, ref: ${path}, callback: ${v}`;
           logging(l, () => console.log(l));
         });
     })
-    .catch(e => {
+    .catch((e) => {
       const err = `pushVideoDataToStorage: ERROR ${JSON.stringify(e)}`;
       logging(err, () => console.log(err));
     });
 };
 
-export const grabListOfVideoPaths = async day => {
+export const grabListOfVideoPaths = async (day) => {
   const daystamp = day
     ? dayjs(day).format("YYYY-MM-DD")
     : dayjs().format("YYYY-MM-DD");
@@ -212,18 +212,15 @@ export const grabListOfVideoPaths = async day => {
     .doc(daystamp)
     .collection("urls")
     .get()
-    .then(async querySnapshot => {
+    .then(async (querySnapshot) => {
       let output = [];
-      await querySnapshot.forEach(async doc => {
+      await querySnapshot.forEach(async (doc) => {
         // here are your DB video filepaths
         const url = doc.data().url;
         // console.log(url);
 
         output.push(
-          firebase
-            .storage()
-            .ref(url)
-            .getDownloadURL() // this is an async function
+          firebase.storage().ref(url).getDownloadURL() // this is an async function
         );
       });
       return Promise.all(output);
@@ -237,38 +234,38 @@ export const pullAppStateFromDB = () => {
     .collection("appState")
     .doc("commands")
     .get()
-    .then(doc => {
+    .then((doc) => {
       console.log(doc.data());
     })
-    .catch(e => console.log("REMOTE DB STATE READ ERROR: ", e));
+    .catch((e) => console.log("REMOTE DB STATE READ ERROR: ", e));
 };
 
 // listener function
-export const listenToDBAppState = onChange => {
+export const listenToDBAppState = (onChange) => {
   return firebase
     .firestore()
     .collection("appState")
     .doc("commands")
-    .onSnapshot(doc => {
+    .onSnapshot((doc) => {
       onChange && onChange(doc.data());
       return doc.data();
     });
 };
 // notify function
-export const reportAppStatetoDB = currentState => {
+export const reportAppStatetoDB = (currentState) => {
   firebase
     .firestore()
     .collection("appState")
     .doc("currentState")
     .set(currentState, { merge: true })
-    .then(v => console.log("REMOTE STATE UPDATER: complete. ", v))
-    .catch(e => console.log("REMOTE DB STATE UPDATE ERROR: ", e));
+    .then((v) => console.log("REMOTE STATE UPDATER: complete. ", v))
+    .catch((e) => console.log("REMOTE DB STATE UPDATE ERROR: ", e));
 };
 
 export const FireStoreState = ({
   collection = "appState",
   doc = "commands",
-  onUpdate
+  onUpdate,
 }) => {
   const [dbState, setDBState] = useState({});
 
@@ -276,7 +273,7 @@ export const FireStoreState = ({
     firebase
       .collection(collection)
       .doc(doc)
-      .onSnapshot(snapshot => {
+      .onSnapshot((snapshot) => {
         setDBState(snapshot.data());
       });
     return () => setDBState({});

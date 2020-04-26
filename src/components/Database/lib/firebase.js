@@ -6,16 +6,17 @@ const config = {
   databaseURL: process.env.databaseURL,
   projectId: process.env.projectId,
   storageBucket: process.env.storageBucket,
-  messagingSenderId: process.env.messagingSenderId
+  messagingSenderId: process.env.messagingSenderId,
 };
 
 const reactConfig = {};
-Object.keys(config).map(v => {
+Object.keys(config).map((v) => {
   reactConfig[v] = process.env[`REACT_APP_${v}`];
 });
 
 if (!firebase.apps.length) {
   firebase.initializeApp(reactConfig);
+  console.log("DATABASE CONNECTED.");
 }
 
 export default firebase;
