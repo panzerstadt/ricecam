@@ -18,7 +18,7 @@ import {
   listenToDBAppState,
   grabListOfVideoPaths,
   logging,
-  activityMonitor,
+  activityMonitor
 } from "../Database";
 
 import { download, convertToArray, convertToObject } from "../atoms";
@@ -43,7 +43,7 @@ const PhotoRecorder = ({ videoRef, captureDelay, isCapturing, onRecord }) => {
   const capture = () => {
     let out = {
       b64: "",
-      rgbArray: [],
+      rgbArray: []
     };
     if (videoRef) {
       let context;
@@ -118,7 +118,7 @@ const PhotoStream = ({ videoRef, streamDelay, isStreaming }) => {
 
       // blob it to send to db
       // blobbing takes a long time therefore there is a callback
-      canvas.toBlob((b) => {
+      canvas.toBlob(b => {
         console.log(b);
         pushImageDataToStorage(b);
       });
@@ -134,11 +134,15 @@ const isWithinTimeRange = (start, end) => {
   const timestamp = dayjs();
   const sH = start.slice(0, 2);
   const sM = start.slice(2);
-  const startTimestamp = dayjs().hour(sH).minute(sM);
+  const startTimestamp = dayjs()
+    .hour(sH)
+    .minute(sM);
 
   const eH = end.slice(0, 2);
   const eM = end.slice(2);
-  const endTimestamp = dayjs().hour(eH).minute(eM);
+  const endTimestamp = dayjs()
+    .hour(eH)
+    .minute(eM);
 
   const chk1 = timestamp.isAfter(startTimestamp);
   const chk2 = timestamp.isBefore(endTimestamp);
@@ -152,11 +156,15 @@ const Timer = ({ start, end, onDetect }) => {
   const timestamp = dayjs();
   const sH = start.slice(0, 2);
   const sM = start.slice(2);
-  const startTimestamp = dayjs().hour(sH).minute(sM);
+  const startTimestamp = dayjs()
+    .hour(sH)
+    .minute(sM);
 
   const eH = end.slice(0, 2);
   const eM = end.slice(2);
-  const endTimestamp = dayjs().hour(eH).minute(eM);
+  const endTimestamp = dayjs()
+    .hour(eH)
+    .minute(eM);
 
   const chk1 = timestamp.isAfter(startTimestamp);
   const chk2 = timestamp.isBefore(endTimestamp);
@@ -179,7 +187,7 @@ const VideoList = ({ toggleRefresh }) => {
   // list videos from db
   const [vlist, setVlist] = useState([]);
   const hydrateList = () =>
-    grabListOfVideoPaths().then((v) => {
+    grabListOfVideoPaths().then(v => {
       setVlist(v);
     });
 
@@ -187,30 +195,29 @@ const VideoList = ({ toggleRefresh }) => {
     hydrateList();
   }, [toggleRefresh]);
 
-  const names = vlist.map((v) =>
+  const names = vlist.map(v =>
     decodeURIComponent(v.split("/videos%2F")[1].split("?alt")[0])
   );
 
   return (
     <>
       <h3>current list of videos today ({vlist.length}): </h3>
-      <ul
+      <ol
         style={{
           whiteSpace: "nowrap",
           fontSize: "0.5rem",
-          listStyleType: "none",
           height: 300,
-          overflow: "scroll",
+          overflow: "scroll"
         }}
       >
         {vlist.map((v, i) => {
           return (
-            <li key={i} style={{ margin: "5px 0" }}>
+            <li key={i} style={{ margin: "5px 0", textAlign: "left" }}>
               <a href={v}>{names[i]}</a>
             </li>
           );
         })}
-      </ul>
+      </ol>
     </>
   );
 };
@@ -220,10 +227,10 @@ const CameraComponent = ({ showPreviews = false }) => {
   const [logs, setLogs] = useState([]);
   const [isDay, setIsDay] = useState(true);
   // log messages
-  const handleLog = (message) => {
-    setLogs((prev) => [...prev.slice(-4), message]);
+  const handleLog = message => {
+    setLogs(prev => [...prev.slice(-4), message]);
     console.log("LOGGER message: ", message);
-    logging(message, (v) => console.log("LOGGER: completed. ", v));
+    logging(message, v => console.log("LOGGER: completed. ", v));
   };
   // log browser status
   const ACTIVITY_MONITOR_INTERVAL = 60000;
@@ -271,45 +278,45 @@ const CameraComponent = ({ showPreviews = false }) => {
     }
   }, [videoRef]);
   // set commands according to db
-  const handleSetVideoDuration = (amount) => {
+  const handleSetVideoDuration = amount => {
     handleLog(
       `setting recording duration to ${dbCommands.videoDurationSec} secs`
     );
     setVideoDuration(amount);
   };
-  const handleSetVideoRecordFrequency = (mins) => {
+  const handleSetVideoRecordFrequency = mins => {
     handleLog(
       `setting recording interval to ${dbCommands.videoRecordFreqMin} mins`
     );
     setRecordIntervalMin(mins);
   };
-  const handleSetTimer = (time) => {
+  const handleSetTimer = time => {
     handleLog(`setting timers to ${JSON.stringify(time)}`);
     if (time.start && time.end) {
-      setLocalStateMonitor((p) => ({
+      setLocalStateMonitor(p => ({
         ...p,
-        isTimerSet: true,
+        isTimerSet: true
       }));
       setTimer(time);
     }
   };
-  const handleRecordOnce = (run) => {
+  const handleRecordOnce = run => {
     handleLog(`recording video once`);
-    setLocalStateMonitor((p) => ({
+    setLocalStateMonitor(p => ({
       ...p,
-      isRecording: true,
+      isRecording: true
     }));
     setIsRecording(true);
   };
-  const handleRecordContinuous = (run) => {
+  const handleRecordContinuous = run => {
     if (run) {
       handleLog(
         `setting continuous recording to ${dbCommands.setContinuousRecording}`
       );
-      setLocalStateMonitor((p) => ({
+      setLocalStateMonitor(p => ({
         ...p,
         isContinuouslyRecording: true,
-        isRecording: true,
+        isRecording: true
       }));
       setIsRecording(true);
       setIsRecordingContinuously(true);
@@ -317,10 +324,10 @@ const CameraComponent = ({ showPreviews = false }) => {
       handleLog(
         `setting continuous recording to ${dbCommands.setContinuousRecording}`
       );
-      setLocalStateMonitor((p) => ({
+      setLocalStateMonitor(p => ({
         ...p,
         isContinuouslyRecording: false,
-        isRecording: false,
+        isRecording: false
       }));
       setIsRecording(false);
       setIsRecordingContinuously(false);
@@ -335,7 +342,7 @@ const CameraComponent = ({ showPreviews = false }) => {
       ) {
         handleSetTimer({
           start: dbCommands.timerStart,
-          end: dbCommands.timerEnd,
+          end: dbCommands.timerEnd
         });
       }
       if (isRecordingContinuously !== dbCommands.setContinuousRecording) {
@@ -355,7 +362,7 @@ const CameraComponent = ({ showPreviews = false }) => {
     isContinuouslyRecording: null,
     isRecording: null,
     isTimerSet: null,
-    nextRecordingTime: null,
+    nextRecordingTime: null
   });
   useEffect(() => {
     reportAppStatetoDB(localStateMonitor);
@@ -380,7 +387,7 @@ const CameraComponent = ({ showPreviews = false }) => {
       // setStreamDelay(1000);
     }
   };
-  const handleStreamToDB = (run) => {
+  const handleStreamToDB = run => {
     if (run) {
       handleLog("DEBUG: streaming images to database!");
       // setStreamDelay(100);
@@ -411,10 +418,13 @@ const CameraComponent = ({ showPreviews = false }) => {
     setIsDetecting(!isDetecting);
   };
 
-  const handleVideoComplete = (vidBlob) => {
+  const [refreshVideo, toggleRefreshVideo] = useState(false);
+  const handleVideoComplete = vidBlob => {
     console.log(cameraName, vidBlob);
-    pushVideoDataToStorage(vidBlob, cameraName);
-    setLocalStateMonitor((p) => ({ ...p, isRecording: false }));
+    pushVideoDataToStorage(vidBlob, cameraName, () =>
+      toggleRefreshVideo(p => !p)
+    );
+    setLocalStateMonitor(p => ({ ...p, isRecording: false }));
     setIsRecording(false);
   };
 
@@ -429,37 +439,53 @@ const CameraComponent = ({ showPreviews = false }) => {
 
   const [isShowingDebug, toggleIsShowingDebug] = useState(false);
 
+  const videoLengthSec = dbCommands.videoDurationSec / 1000;
+
   return (
-    <div style={{ backgroundColor: isDay ? "white" : "#282c34" }}>
+    <div
+      style={{
+        backgroundColor: isDay ? "white" : "#282c34",
+        width: "100%",
+        overflowX: "hidden"
+      }}
+    >
       <Camera onRef={setVideoRef} />
 
       <br />
+
       {!cameraName ? (
         <h3>please select a camera</h3>
       ) : (
-        <p>
-          select <strong style={{ color: "gray" }}>'record 5 sec'</strong> to
-          test that the camera is recording properly.
-          <br />
-          if it does, your new video should show up on the 'current list of
-          videos today' section.
-          <br />
-          When you are ready, press the{" "}
-          <strong>'record 5 sec indefinitely'</strong> button.
-        </p>
+        <div style={{ textAlign: "left", padding: "0 10px" }}>
+          <small>
+            select <strong style={{ color: "gray" }}>'record 1 video'</strong>{" "}
+            to test that the camera is recording properly. If it does, your new
+            video should show up on the 'current list of videos today' section.
+            <br />
+            <br />
+            When you are ready, press the <strong>
+              'record indefinitely'
+            </strong>{" "}
+            button.
+          </small>
+        </div>
       )}
+
+      <br />
+      {isRecording && <h3 style={{ color: "red" }}>recording...</h3>}
 
       <code>recording options: </code>
       <br />
       <button
         style={{
-          color: isRecording ? "red" : "black",
+          color: isRecording && "red",
           padding: "5px 10px",
-          fontWeight: "bold",
+          fontWeight: "bold"
         }}
         onClick={handleRecordOnce}
+        disabled={!cameraName}
       >
-        record 5 sec
+        record 1 video {!!videoLengthSec && `(${videoLengthSec} sec)`}
       </button>
       {/* <button onClick={handleRecord1Hour}>
         record 5 sec videos for 1 hour
@@ -467,22 +493,23 @@ const CameraComponent = ({ showPreviews = false }) => {
       <button
         onClick={handleRecordContinuous}
         style={{
-          color: isRecordingContinuously ? "red" : "black",
+          color: isRecordingContinuously && "red",
           padding: "5px 10px",
-          fontWeight: "bold",
+          fontWeight: "bold"
         }}
+        disabled={!cameraName}
       >
-        record 5 sec indefinitely
+        record indefinitely
       </button>
       <select
-        onChange={(e) => {
+        onChange={e => {
           console.log(e.target.value + " selected");
           setCameraName(e.target.value);
         }}
         style={{
           padding: "5px 10px",
           fontWeight: "bold",
-          color: cameraName ? "black" : "red",
+          color: cameraName ? "black" : "red"
         }}
       >
         <option style={{ color: "red" }} value="">
@@ -492,11 +519,12 @@ const CameraComponent = ({ showPreviews = false }) => {
         <option value="CAM 02">CAM 02</option>
       </select>
       <br />
-      <VideoList toggleRefresh={isRecording} />
+      <VideoList toggleRefresh={refreshVideo} />
+
       <br />
 
       <button
-        onClick={() => toggleIsShowingDebug((p) => !p)}
+        onClick={() => toggleIsShowingDebug(p => !p)}
         style={{ padding: "5px 10px", marginBottom: 30 }}
       >
         Toggle Show Debug
@@ -532,21 +560,6 @@ const CameraComponent = ({ showPreviews = false }) => {
 
           <br />
           {/* {showPreviews && <Gallery data={data} />} */}
-          <VideoRecorder
-            videoRef={videoRef}
-            triggerRecording={isRecording}
-            duration={videoDuration}
-            showPreview={showPreviews}
-            onComplete={handleVideoComplete}
-          />
-          {/* possible usage: user (twitter) controlled photo session
-      <PhotoRecorder
-        videoRef={videoRef}
-        showPreview={showPreviews}
-        captureDelay={captureDelay}
-        isCapturing={isCapturing}
-      /> */}
-
           <PhotoStream
             videoRef={videoRef}
             showPreview={showPreviews}
@@ -562,11 +575,26 @@ const CameraComponent = ({ showPreviews = false }) => {
         </div>
       ) : null}
 
+      <VideoRecorder
+        videoRef={videoRef}
+        triggerRecording={isRecording}
+        duration={videoDuration}
+        showPreview={showPreviews}
+        onComplete={handleVideoComplete}
+      />
+
+      {/* possible usage: user (twitter) controlled photo session
+      <PhotoRecorder
+        videoRef={videoRef}
+        showPreview={showPreviews}
+        captureDelay={captureDelay}
+        isCapturing={isCapturing}
+      /> */}
       <BrightnessDetector
         videoRef={videoRef}
         isDetecting={isDetecting}
         delay={DELAY}
-        onDetect={(v) => setIsDay(v.bright)}
+        onDetect={v => setIsDay(v.bright)}
       />
     </div>
   );
