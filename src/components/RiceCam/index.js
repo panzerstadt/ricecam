@@ -175,15 +175,17 @@ const Timer = ({ start, end, onDetect }) => {
   );
 };
 
-const VideoList = () => {
+const VideoList = ({ toggleRefresh }) => {
   // list videos from db
   const [vlist, setVlist] = useState([]);
-
-  useEffect(() => {
+  const hydrateList = () =>
     grabListOfVideoPaths().then((v) => {
       setVlist(v);
     });
-  }, []);
+
+  useEffect(() => {
+    hydrateList();
+  }, [toggleRefresh]);
 
   const names = vlist.map((v) =>
     decodeURIComponent(v.split("/videos%2F")[1].split("?alt")[0])
@@ -490,7 +492,7 @@ const CameraComponent = ({ showPreviews = false }) => {
         <option value="CAM 02">CAM 02</option>
       </select>
       <br />
-      <VideoList />
+      <VideoList toggleRefresh={isRecording} />
       <br />
 
       <button
