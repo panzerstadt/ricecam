@@ -7,7 +7,7 @@ class App extends Component {
   render() {
     return (
       <div className="App">
-        <p>v1.5</p>
+        <p>v1.6</p>
         <br />
         <RiceCam />
       </div>
