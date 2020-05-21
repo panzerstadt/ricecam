@@ -1,13 +1,13 @@
 {
   "main.css": "/ricecam/static/css/main.92ba8325.chunk.css",
-  "main.js": "/ricecam/static/js/main.ff764473.chunk.js",
-  "main.js.map": "/ricecam/static/js/main.ff764473.chunk.js.map",
+  "main.js": "/ricecam/static/js/main.f0270525.chunk.js",
+  "main.js.map": "/ricecam/static/js/main.f0270525.chunk.js.map",
   "runtime~main.js": "/ricecam/static/js/runtime~main.a553ff62.js",
   "runtime~main.js.map": "/ricecam/static/js/runtime~main.a553ff62.js.map",
-  "static/js/2.2cb85145.chunk.js": "/ricecam/static/js/2.2cb85145.chunk.js",
-  "static/js/2.2cb85145.chunk.js.map": "/ricecam/static/js/2.2cb85145.chunk.js.map",
+  "static/js/2.520b7952.chunk.js": "/ricecam/static/js/2.520b7952.chunk.js",
+  "static/js/2.520b7952.chunk.js.map": "/ricecam/static/js/2.520b7952.chunk.js.map",
   "index.html": "/ricecam/index.html",
-  "precache-manifest.24a3a77c47375c8d1ed19f73eb163550.js": "/ricecam/precache-manifest.24a3a77c47375c8d1ed19f73eb163550.js",
+  "precache-manifest.9544f5bcf2c681b70359750ffd3ce21d.js": "/ricecam/precache-manifest.9544f5bcf2c681b70359750ffd3ce21d.js",
   "service-worker.js": "/ricecam/service-worker.js",
   "static/css/main.92ba8325.chunk.css.map": "/ricecam/static/css/main.92ba8325.chunk.css.map",
   "static/media/logo.svg": "/ricecam/static/media/logo.5d5d9eef.svg"
